@@ -8,7 +8,7 @@
 #define FMT_HEADER_ONLY
 #include "fmt/core.h"
 #include <random>
-
+#include <omp.h>
 #include <ctime>
 
 using fmt::format;
@@ -1088,6 +1088,7 @@ namespace DP {
 }
 
 int main() {
+    // OMP_THREADS_MAX omp_set_num_threads(1024);
     // DP::output_yaml();
     DP::test_one_artifact(false);
     /*
