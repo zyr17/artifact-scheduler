@@ -17,7 +17,8 @@ class MLP(nn.Module):
     def forward(self, weight, bar, cost, set):
         bar = bar.unsqueeze(1)
         cost = cost.unsqueeze(1)
-        set = set.unsqueeze(1)
+        if len(set.shape) == 1:
+            set = set.unsqueeze(1)
         x = torch.cat([weight, bar, cost, set], dim = 1)
         x = self.mlps(x)
         return x.squeeze(1)

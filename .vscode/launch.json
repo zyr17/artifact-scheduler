@@ -11,7 +11,17 @@
             "program": "main.py",
             "cwd": "${workspaceFolder}/train",
             "console": "integratedTerminal",
-            "justMyCode": true
+            "justMyCode": true,
+            "args": [
+                "-1",
+                "100000000",
+                "1e-4",
+                "test_data",
+                "99999990",
+                "99999990",
+                "MLPSetEmb",
+                "32,32,32",
+            ]
         }
     ]
 }

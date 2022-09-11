@@ -1,4 +1,5 @@
 import torch
+import argparse
 from torch import nn
 from tqdm import tqdm
 import random
@@ -30,6 +31,12 @@ if torch.cuda.is_available():
 data_names = ['hp', 'atk', 'def', 'hpp', 'atkp', 'defp', 'em', 'er', 'cr', 
               'cd', 'bar', 'cost', 'set', 'result']
 setname = ['flower', 'plume', 'sands', 'goblet', 'circlet']
+
+
+def cuda(obj):
+    if torch.cuda.is_available():
+        return obj.cuda()
+    return obj
 
 
 def process_data(data_folder = 'data', save_pth = 'data.pth'):
@@ -173,6 +180,8 @@ def train(model, data, test_data, lr = 1e-5, iteration = 10000000,
     test_loader, _ = get_dataloader(test_data, train_split = 1)
     optim = torch.optim.Adam(params = model.parameters(), lr = lr)
     loss_func = nn.MSELoss()
+    save_folder = wandb_name
+    os.makedirs(f'models/{save_folder}', exist_ok = True)
     if wandb_name:
         wandb.init(entity = os.environ['WANDB_ENTITY'], 
                    project = os.environ['WANDB_PROJECT'],
@@ -181,6 +190,8 @@ def train(model, data, test_data, lr = 1e-5, iteration = 10000000,
     counter = 0
     best = 1e100
     loss_prev = []
+    model = cuda(model)
+    optim = cuda(optim)
     for epoch in range(iteration):
         if counter > iteration:
             break
@@ -188,6 +199,7 @@ def train(model, data, test_data, lr = 1e-5, iteration = 10000000,
             print(f'epoch {epoch}: {num}/{len(train_loader)}     ', end = '\r')
             counter += 1
             optim.zero_grad()
+            data = [cuda(d) for d in data]
             x, y = data[:-1], data[-1]
             pred = model(*x)
             loss = loss_func(pred, y)
@@ -205,6 +217,7 @@ def train(model, data, test_data, lr = 1e-5, iteration = 10000000,
                         total_res = []
                         total_y = []
                         for data in tqdm(loader):
+                            data = [cuda(d) for d in data]
                             x, y = data[:-1], data[-1]
                             pred = model(*x)
                             total_res.append(pred)
@@ -229,33 +242,62 @@ def train(model, data, test_data, lr = 1e-5, iteration = 10000000,
                         best = loss.item()
                         torch.save(
                             model.state_dict(), 
-                            f'models/{counter:010d}_{loss.item():.6f}.pth'
+                            f'models/{save_folder}/'
+                            f'{counter:010d}_{loss.item():.6f}.pth'
                         )
     return model
 
 
+def read_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('set_filter', help = 'set set_filter. if is -1,'
+                        ' will not filter any.')
+    parser.add_argument('iteration', help = 'train iteration', type = int)
+    parser.add_argument('lr', help = 'learning rate', type = float)
+    parser.add_argument('test_data_folder')
+    parser.add_argument('max_y', help = 'max result. all result above max_y'
+                        'will be ignored. (usually their real value is bigger '
+                        'than expected max in calculation)', type = int)
+    parser.add_argument('test_max_y', help = 'max_y for testset. see detail '
+                        'in max_y.', type = int)
+    parser.add_argument('model', help = 'model class name')
+    parser.add_argument('hidden', help = 'hidden layer number and size')
+    args = parser.parse_args()
+    if args.set_filter == '-1':
+        args.set_filter = []
+    else:
+        args.set_filter = [int(x) for x in args.set_filter.split(',')]
+    args.hidden = [int(x) for x in args.hidden.split(',')] 
+    return args
+
+
 if __name__ == '__main__':
+    args = read_args()
+
     data = process_data()
-    print(data.shape)
-    set_filter = [2]
+    print('----- train data -----\n', data.shape)
     data_cleaned = data_clean(
         data, 
-        set_filter = set_filter, 
-        do_normalize = False
+        set_filter = args.set_filter, 
+        y_max = args.max_y
     )
     print(data_cleaned[0].shape)
-    test_data = process_data('test_data')
-    print(test_data.shape)
+    test_data = process_data(args.test_data_folder)
+    print('----- test data -----\n', test_data.shape)
     test_data_cleaned = data_clean(
         test_data, 
-        set_filter = set_filter, 
-        do_normalize = False
+        set_filter = args.set_filter, 
+        y_max = args.test_max_y
     )
     print(test_data_cleaned[0].shape)
     # draw_avg_dist_plot(bar, y, 0, 70)
     # model = MLP(13, hidden = [32, 32, 32])
-    model = MLP(13)
+    model = globals()[args.model](13, hidden = args.hidden)
 
     train(model, data_cleaned, test_data_cleaned, 
-          iteration = 100000000, 
-          wandb_name = '32_32_linear_set2')
+          iteration = args.iteration, 
+          lr = args.lr,
+          wandb_name = f'set{",".join([str(x) for x in args.set_filter])}_'
+                       f'lr{args.lr}_'
+                       f'{args.model}_'
+                       f'{",".join([str(x) for x in args.hidden])}')
