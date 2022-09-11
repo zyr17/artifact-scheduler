@@ -1,0 +1,7 @@
+.env
+data.pth
+models
+data
+test_data
+wandb
+__pycache__
