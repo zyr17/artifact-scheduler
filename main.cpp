@@ -1113,6 +1113,7 @@ namespace DP {
                 input >> num;
                 m[DATA::string_to_affix_names.find(i)->second] = num;
             }
+            m[DATA::AFFIX_NAMES::er] = DATA::rand(); // recharge can be any weight
             sub_scores[note] = std::move(m);
         }
         return sub_scores;
