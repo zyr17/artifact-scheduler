@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <tuple>
 #include <iostream>
+#include <fstream>
 #include <map>
 #include <unordered_map>
 #include <vector>
@@ -1085,6 +1086,39 @@ namespace DP {
         return { sub_scores, score_bar, dfcost, set };
     }
 
+    auto read_existing_weight(const std::string filename) {
+        std::map<std::string, std::map<DATA::AFFIX_NAMES, double>> sub_scores;
+        std::vector<std::string> order = {
+            "hp",
+            "atk",
+            "def",
+            "hpp",
+            "atkp",
+            "defp",
+            "em",
+            "er",
+            "cr",
+            "cd"
+        };
+        // FILE *f = fopen(filename.c_str(), "r");
+        std::ifstream input(filename, std::ios::in);
+        while (1) {
+            std::map<DATA::AFFIX_NAMES, double> m;
+            std::string note;
+            input >> note;
+            if (input.eof())
+                break;
+            for (auto &i : order) {
+                double num;
+                input >> num;
+                m[DATA::string_to_affix_names.find(i)->second] = num;
+            }
+            m[DATA::AFFIX_NAMES::er] = DATA::rand(); // recharge can be any weight
+            sub_scores[note] = std::move(m);
+        }
+        return sub_scores;
+    }
+
 }
 
 int main() {
@@ -1166,6 +1200,30 @@ int main() {
         std::cout << "test over, time " << (clock() - start_time) * 1.0 / CLOCKS_PER_SEC << std::endl;
     }
     */
+
+    // read predefined weights, random bar/df/set and calculate results
+    auto res = DP::read_existing_weight("weights.txt");
+    // for (auto &[note, data] : res) {
+    //     std::cout << note << ' ';
+    //     for (auto &[affix, wei] : data) {
+    //         std::cout << format("{}:{} ", type_to_string(DATA::string_to_affix_names, affix), wei);
+    //     }
+    //     std::cout << std::endl;
+    // }
+    // std::cout << res.size() << std::endl;
+    // return 0;
+    for (auto &[note, data] : res) {
+        auto [ss, bar, df, set] = DP::generate_random_gain_input(data);
+        auto result = DP::find_gain(ss, bar, df, set);
+        std::string s = "";
+        for (auto& [affix, w] : DATA::SUB_PROB_WEIGHT) {
+            auto name = DATA::type_to_string(DATA::string_to_affix_names, affix);
+            s += format("{}:{} ", name, ss[affix]);
+        }
+        s += format(" bar:{} cost:{} set:{} result:{}", bar, df, DATA::type_to_string(DATA::string_to_set_names, set), result);
+        std::cout << s << std::endl;
+    }
+    return 0;
 
     // test random generate input and calculate result
     for (auto i = 1000; i--; ) {
