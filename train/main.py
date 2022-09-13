@@ -1,4 +1,5 @@
 import torch
+import time
 import argparse
 from torch import nn
 from tqdm import tqdm
@@ -178,6 +179,7 @@ def train(model, data, test_data, lr = 1e-5, iteration = 10000000,
           eval_interval = 1000, wandb_name = ''):
     train_loader, valid_loader = get_dataloader(data)
     test_loader, _ = get_dataloader(test_data, train_split = 1)
+    model = cuda(model)
     optim = torch.optim.Adam(params = model.parameters(), lr = lr)
     loss_func = nn.MSELoss()
     save_folder = wandb_name
@@ -189,34 +191,31 @@ def train(model, data, test_data, lr = 1e-5, iteration = 10000000,
         wandb.config.seed = SEED
     counter = 0
     best = 1e100
-    loss_prev = []
-    model = cuda(model)
-    optim = cuda(optim)
     for epoch in range(iteration):
         if counter > iteration:
             break
+        train_loss = []
+        start_time = time.time()
         for num, data in enumerate(train_loader):
-            print(f'epoch {epoch}: {num}/{len(train_loader)}     ', end = '\r')
+            # print(f'epoch {epoch}: {num}/{len(train_loader)}   ', end = '\r')
             counter += 1
             optim.zero_grad()
             data = [cuda(d) for d in data]
             x, y = data[:-1], data[-1]
             pred = model(*x)
             loss = loss_func(pred, y)
-            if wandb_name:
-                wandb.log({ 'train_loss': loss.item() }, step = counter)
+            # if wandb_name:
+            #     wandb.log({ 'train_loss': loss.item() }, step = counter)
             loss.backward()
             optim.step()
-            loss_prev.append(loss.item())
+            train_loss.append(loss.item())
             if counter % eval_interval == 0:
-                print(f'train loss {sum(loss_prev) / len(loss_prev):.6f}')
-                loss_prev = []
-                print('start evaluate                                  ')
+                # print(f'train loss {sum(loss_prev) / len(loss_prev):.6f}')
                 with torch.no_grad():
                     def make_one_test(loader):
                         total_res = []
                         total_y = []
-                        for data in tqdm(loader):
+                        for data in loader:
                             data = [cuda(d) for d in data]
                             x, y = data[:-1], data[-1]
                             pred = model(*x)
@@ -245,6 +244,13 @@ def train(model, data, test_data, lr = 1e-5, iteration = 10000000,
                             f'models/{save_folder}/'
                             f'{counter:010d}_{loss.item():.6f}.pth'
                         )
+        print(f'epoch {epoch}/{iteration // len(train_loader)}, '
+              f'iteration {counter}/{iteration}, '
+              f'train loss {sum(train_loss) / len(train_loss):.6f}, '
+              f'{time.time() - start_time:.2f}s/epoch'
+        )
+        wandb.log({ 'train_loss': sum(train_loss) / len(train_loss) }, 
+                  step = counter)
     return model
 
 
