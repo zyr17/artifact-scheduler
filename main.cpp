@@ -9,8 +9,11 @@
 #define FMT_HEADER_ONLY
 #include "fmt/core.h"
 #include <random>
-#include <omp.h>
 #include <ctime>
+
+#ifndef __clang__
+#include <omp.h>
+#endif
 
 using fmt::format;
 
@@ -1201,6 +1204,7 @@ int main() {
     }
     */
 
+#ifndef __clang__  // using clang means compile to JS, and cannot read file
     // read predefined weights, random bar/df/set and calculate results
     auto res = DP::read_existing_weight("weights.txt");
     // for (auto &[note, data] : res) {
@@ -1224,8 +1228,10 @@ int main() {
         std::cout << s << std::endl;
     }
     return 0;
+#endif
 
     // test random generate input and calculate result
+    // DP::FIND_GAIN_DEBUG = true;
     for (auto i = 1000; i--; ) {
         auto [ss, bar, df, set] = DP::generate_random_gain_input();
         auto result = DP::find_gain(ss, bar, df, set);
