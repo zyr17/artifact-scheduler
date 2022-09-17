@@ -11,7 +11,10 @@
 #include <random>
 #include <ctime>
 
-#ifndef __clang__
+#ifdef __clang__
+#include <emscripten/bind.h>
+using namespace emscripten;
+#else
 #include <omp.h>
 #endif
 
@@ -1124,6 +1127,15 @@ namespace DP {
 
 }
 
+#ifdef __clang__ // clang is compiled to JS, define interface
+
+EMSCRIPTEN_BINDINGS(my_module) {
+    function("find_gain", &DP::find_gain);
+    auto (&choose_calc)(const DATA::Artifact&, const std::map<DATA::AFFIX_NAMES, double> &, double, DP::dftype) = DP::calc;
+    function("calc", &choose_calc);
+}
+
+#else
 int main() {
     // OMP_THREADS_MAX omp_set_num_threads(1024);
     // DP::output_yaml();
@@ -1204,7 +1216,6 @@ int main() {
     }
     */
 
-#ifndef __clang__  // using clang means compile to JS, and cannot read file
     // read predefined weights, random bar/df/set and calculate results
     auto res = DP::read_existing_weight("weights.txt");
     // for (auto &[note, data] : res) {
@@ -1228,7 +1239,6 @@ int main() {
         std::cout << s << std::endl;
     }
     return 0;
-#endif
 
     // test random generate input and calculate result
     // DP::FIND_GAIN_DEBUG = true;
@@ -1244,4 +1254,4 @@ int main() {
         std::cout << s << std::endl;
     }
 }
-
+#endif
