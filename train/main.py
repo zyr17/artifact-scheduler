@@ -237,12 +237,12 @@ def train(model, data, test_data, lr = 1e-5, iteration = 10000000,
                         f'valid loss {valid_loss.item():.6f}, '
                         f'test loss {test_loss.item():.6f}'
                     )
-                    if loss.item() < best:
-                        best = loss.item()
+                    if test_loss.item() < best:
+                        best = test_loss.item()
                         torch.save(
                             model.state_dict(), 
                             f'models/{save_folder}/'
-                            f'{counter:010d}_{loss.item():.6f}.pth'
+                            f'{counter:010d}_{test_loss.item():.6f}.pth'
                         )
         print(f'epoch {epoch}/{iteration // len(train_loader)}, '
               f'iteration {counter}/{iteration}, '
