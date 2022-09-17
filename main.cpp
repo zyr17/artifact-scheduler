@@ -2,6 +2,7 @@
 #include <tuple>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <map>
 #include <unordered_map>
 #include <vector>
@@ -137,6 +138,39 @@ namespace DATA {
         AFFIX_NAMES main;
         std::vector<std::pair<AFFIX_NAMES, int>> sub;
         int level;
+
+        Artifact () = default;
+        Artifact (const Artifact &a) = default;
+        Artifact (
+            SET_NAMES set, AFFIX_NAMES main, 
+            const std::vector<std::pair<AFFIX_NAMES, int>> &sub, int level):
+            set(set), main(main), sub(sub), level(level) {}
+
+        // construct with string output by to_string
+        Artifact (const std::string &art_str) {
+            std::string s = art_str;
+            for (auto &i : s)
+                if (i == '|')
+                    i = ' ';
+            std::istringstream sin(s);
+            std::string set_name, set_data, lv_name, main_name, main_data, sub_name;
+            int lv_data;
+            sin >> set_name >> set_data >> lv_name >> lv_data >> main_name >> main_data >> sub_name;
+            if (set_name != "SET" || lv_name != "LV" || main_name != "MAIN" || sub_name != "SUB")
+                throw std::runtime_error("wrong format: " + art_str);
+            set = string_to_set_names.find(set_data)->second;
+            level = lv_data;
+            main = string_to_affix_names.find(main_data)->second;
+            while (1) {
+                std::string sub_data = "";
+                sin >> sub_data;
+                if (sin.eof()) break;
+                auto comma_pos = sub_data.find(",");
+                auto sub_affix = string_to_affix_names.find(sub_data.substr(0, comma_pos))->second;
+                auto sub_value = std::stoi(sub_data.substr(comma_pos));
+                sub.push_back({ sub_affix, sub_value });
+            }
+        }
 
         std::string to_string() {
             std::string substr = "";
@@ -1215,6 +1249,20 @@ int main() {
         std::cout << "test over, time " << (clock() - start_time) * 1.0 / CLOCKS_PER_SEC << std::endl;
     }
     */
+
+    // check artifact to str and str to artifact works
+    for (int i = 0; i < 10000; i++) {
+        // DP::DEBUG = true;
+        auto randnum = DATA::rand();
+        auto art = DATA::get_drop(randnum);
+        auto art_str = art.to_string();
+        DATA::Artifact new_art(art_str);
+        if (art_str != new_art.to_string()) {
+            std::cout << art_str << '\n' << new_art.to_string() << std::endl;
+            throw std::runtime_error(art_str);
+        }
+    }
+    return 0;
 
     // read predefined weights, random bar/df/set and calculate results
     auto res = DP::read_existing_weight("weights.txt");
