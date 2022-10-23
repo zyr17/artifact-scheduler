@@ -971,6 +971,13 @@ namespace DP {
         return calc(art, select_sub_score(art, sub_scores), score_bar, gain);
     }
 
+    // get artifact string as input
+    // std::tuple<bool, DP::dftype, DP::dftype, double, double> calc(const std::string &art_string,
+    //     const std::map<DATA::AFFIX_NAMES, double>& sub_scores, double score_bar, dftype gain) {
+    //     auto art = DATA::Artifact(art_string);
+    //     return calc(art, sub_scores, score_bar, gain);
+    // }
+
     // output cell data into yaml. key1=N, key2=second, [list of first]
     void output_yaml() {
         init();
@@ -1256,7 +1263,6 @@ int main() {
     }
     */
 
-    /*
     // check artifact to str and str to artifact works
     for (int i = 0; i < 10000; i++) {
         // DP::DEBUG = true;
@@ -1269,12 +1275,22 @@ int main() {
             std::cout << art_str << '\n' << new_art.to_string() << std::endl;
             throw std::runtime_error(art_str);
         }
+        auto [ss, bar, df, set] = DP::generate_random_gain_input();
+        df = 2100000000;
+        auto try1 = DP::calc(art_str, ss, bar, df);
+        auto &[success, gain, dfcost, success_rate, scoregain] = try1;
+        auto try2 = DP::calc(art, ss, bar, df);
+        auto &[success2, gain2, dfcost3, success_rate2, scoregain2] = try2;
+        std::cout << format("success:{} gain:{} dfcost:{} success_rate:{} scoregain:{}\n", success, gain, dfcost, success_rate, scoregain);
+        if (try1 != try2) {
+			std::cout << format("success:{} gain:{} dfcost:{} success_rate:{} scoregain:{}\n", success2, gain2, dfcost2, success_rate2, scoregain2);
+            throw std::runtime_error("");
+        }
     }
     return 0;
-    */
 
     // read predefined weights, random bar/df/set and calculate results
-    auto res = DP::read_existing_weight("weights.txt");
+    // auto res = DP::read_existing_weight("weights.txt");
     // for (auto &[note, data] : res) {
     //     std::cout << note << ' ';
     //     for (auto &[affix, wei] : data) {
@@ -1285,6 +1301,7 @@ int main() {
     // std::cout << res.size() << std::endl;
     // return 0;
     /*
+    // auto res = DP::read_existing_weight("weights.txt");
     for (auto& [note, data] : res) {
         auto [ss, bar, df, set] = DP::generate_random_gain_input(data);
         auto result = DP::find_gain(ss, bar, df, set);
@@ -1315,6 +1332,7 @@ int main() {
     }
     */
 
+    /*
     // read generated data and check data cost and real cost
     std::string result_file = "result.txt";
     std::ifstream rin(result_file);
@@ -1342,6 +1360,7 @@ int main() {
         auto calc_cost = DP::get_expected_dfcost(sub_scores, bar, DATA::get_all_artifacts_with_probs(set), nnresult);
         std::cout << line << "real_cost:" << calc_cost << " percent:" << calc_cost / cost << std::endl;
     }
+    */
 }
 #endif
 
