@@ -5,6 +5,7 @@
 #include <sstream>
 #include <map>
 #include <unordered_map>
+#include <map>
 #include <vector>
 #include <random>
 #include <ctime>
@@ -1176,10 +1177,76 @@ namespace DP {
 
 #ifdef __clang__ // clang is compiled to JS, define interface
 
+
+auto get_string_to_affix_names() {
+    std::map<std::string, DATA::AFFIX_NAMES> map;
+    for (auto &[i, j] : DATA::string_to_affix_names)
+        // map[i] = static_cast<int>(j);
+        map[i] = j;
+    return map;
+}
+
+// interface for javascript, input as string, output double vector
+auto calc(const std::string &art_str, const std::string sub_scores_json, 
+    double score_bar, DP::dftype gain) {
+
+    auto art = DATA::Artifact(art_str);
+    std::map<std::string, double> sub_str_scores;
+    std::string name, number;
+    int pos = 0, status = 0; // status 0 name, status 1 number
+    while (sub_scores_json[pos ++ ] == '{');
+    while (sub_scores_json[pos] != '}') {
+        auto c = sub_scores_json[pos++];
+        // std::cout << c << std::endl;
+        if (c == ' ' || c == '"') continue;
+        if (c == ':' || c == ',') {
+            status = c == ':';
+            if (status == 0) {
+                // std::cout << name << '|' << number << '\n';
+                sub_str_scores[name] = std::stod(number);
+                name = number = "";
+            }
+            continue;
+        }
+        if (status == 0)
+            name += c;
+        else
+            number += c;
+    }
+    sub_str_scores[name] = std::stod(number);
+    // for (auto &[i, j] : sub_str_scores) std::cout << i << '|' << j << std::endl;
+
+    std::map<DATA::AFFIX_NAMES, double> sub_scores;
+    for (auto &[i, j] : sub_str_scores)
+        sub_scores[DATA::string_to_affix_names.find(i)->second] = j;
+
+    auto [a, b, c, d, e] = DP::calc(art, sub_scores, score_bar, gain);
+    std::vector<double> res;
+    res.push_back(a);
+    res.push_back(b);
+    res.push_back(c);
+    res.push_back(d);
+    res.push_back(e);
+    return res;
+}
+
 EMSCRIPTEN_BINDINGS(my_module) {
+    // function("get_string_to_affix_names", &get_string_to_affix_names);
+    // register_map<std::string, DATA::AFFIX_NAMES>("map<string, affix_names>");
+    // enum_<DATA::AFFIX_NAMES>("AFFIX_NAMES") {
+    //     start,
+    //     hp, atk, def,
+    //     hpp, atkp, defp,
+    //     em, er, cr, cd,
+    //     hb,
+    //     pyroDB, hydroDB, electroDB, anemoDB, cryoDB, geoDB, physicalDB, dendroDB,
+    //     end,
+    // };
+
     function("find_gain", &DP::find_gain);
-    auto (&choose_calc)(const DATA::Artifact&, const std::map<DATA::AFFIX_NAMES, double> &, double, DP::dftype) = DP::calc;
-    function("calc", &choose_calc);
+    // auto (&choose_calc)(const DATA::Artifact&, const std::map<DATA::AFFIX_NAMES, double> &, double, DP::dftype) = DP::calc;
+    function("calc", &calc);
+    register_vector<double>("vector<double>");
 }
 
 #else
@@ -1280,7 +1347,10 @@ int main() {
         auto try1 = DP::calc(art_str, ss, bar, df);
         auto &[success, gain, dfcost, success_rate, scoregain] = try1;
         auto try2 = DP::calc(art, ss, bar, df);
-        auto &[success2, gain2, dfcost3, success_rate2, scoregain2] = try2;
+        auto &[success2, gain2, dfcost2, success_rate2, scoregain2] = try2;
+        std::cout << "*****\n";
+        std::cout << art_str << '\n';
+        for (auto &[i, j] : ss) std::cout << format("\"{}\": {},", DATA::type_to_string(DATA::string_to_affix_names, i), j);
         std::cout << format("success:{} gain:{} dfcost:{} success_rate:{} scoregain:{}\n", success, gain, dfcost, success_rate, scoregain);
         if (try1 != try2) {
 			std::cout << format("success:{} gain:{} dfcost:{} success_rate:{} scoregain:{}\n", success2, gain2, dfcost2, success_rate2, scoregain2);

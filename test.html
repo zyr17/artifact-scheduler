@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+  <script>
+    var Module = {
+      onRuntimeInitialized: function() {
+        console.log(Module);
+        let ss = JSON.parse('{"hp": 0.4985200578314423,"atk": 0,"def": 0.03626911144003057,"hpp": 1,"atkp": 0,"defp": 0.8536030951271348,"em": 0.7347691990250844,"er": 0.35327902097323677,"cr": 0.2735932830704937,"cd": 0.7422698593493847}');
+        let vector = Module.calc("SET circlet|LV 0|MAIN cr        |SUB  8,hp  |10,def | 8,hpp | 8,er", JSON.stringify(ss), 30, 99999999)
+        let res = [];
+        for (let i = 0; i < vector.size(); i ++ )
+            res.push(vector.get(i));
+        console.log('lerp result: ', res);
+      }
+    };
+  </script>
+  <script src="art-algo.js"></script>
+</html>
