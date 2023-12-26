@@ -5,10 +5,8 @@
 #include <sstream>
 #include <map>
 #include <unordered_map>
+#include <map>
 #include <vector>
-// #include <format>
-#define FMT_HEADER_ONLY
-#include "fmt/core.h"
 #include <random>
 #include <ctime>
 
@@ -19,7 +17,14 @@ using namespace emscripten;
 #include <omp.h>
 #endif
 
+#ifdef _WIN32
+#include <format>
+using std::format;
+#else
+#define FMT_HEADER_ONLY
+#include "fmt/core.h"
 using fmt::format;
+#endif
 
 namespace DATA {
 
@@ -39,32 +44,32 @@ namespace DATA {
         end,
     };
     const std::unordered_map<std::string, SET_NAMES> string_to_set_names = {
-        {"flower", SET_NAMES::flower}, 
+        {"flower", SET_NAMES::flower},
         {"plume", SET_NAMES::plume},
         {"sands", SET_NAMES::sands},
         {"goblet", SET_NAMES::goblet},
         {"circlet", SET_NAMES::circlet},
     };
-    const std::unordered_map<std::string, AFFIX_NAMES> string_to_affix_names = { 
+    const std::unordered_map<std::string, AFFIX_NAMES> string_to_affix_names = {
         { "hp", AFFIX_NAMES::hp },
         { "atk", AFFIX_NAMES::atk },
-		{ "def", AFFIX_NAMES::def },
-		{ "hpp", AFFIX_NAMES::hpp },
-		{ "atkp", AFFIX_NAMES::atkp },
-		{ "defp", AFFIX_NAMES::defp },
-		{ "em", AFFIX_NAMES::em },
-		{ "er", AFFIX_NAMES::er },
-		{ "cr", AFFIX_NAMES::cr },
-		{ "cd", AFFIX_NAMES::cd },
-		{ "hb", AFFIX_NAMES::hb },
-		{ "pyroDB", AFFIX_NAMES::pyroDB },
-		{ "hydroDB", AFFIX_NAMES::hydroDB },
-		{ "electroDB", AFFIX_NAMES::electroDB },
-		{ "anemoDB", AFFIX_NAMES::anemoDB },
-		{ "cryoDB", AFFIX_NAMES::cryoDB },
-		{ "geoDB", AFFIX_NAMES::geoDB },
-		{ "physicalDB", AFFIX_NAMES::physicalDB },
-		{ "dendroDB", AFFIX_NAMES::dendroDB },
+        { "def", AFFIX_NAMES::def },
+        { "hpp", AFFIX_NAMES::hpp },
+        { "atkp", AFFIX_NAMES::atkp },
+        { "defp", AFFIX_NAMES::defp },
+        { "em", AFFIX_NAMES::em },
+        { "er", AFFIX_NAMES::er },
+        { "cr", AFFIX_NAMES::cr },
+        { "cd", AFFIX_NAMES::cd },
+        { "hb", AFFIX_NAMES::hb },
+        { "pyroDB", AFFIX_NAMES::pyroDB },
+        { "hydroDB", AFFIX_NAMES::hydroDB },
+        { "electroDB", AFFIX_NAMES::electroDB },
+        { "anemoDB", AFFIX_NAMES::anemoDB },
+        { "cryoDB", AFFIX_NAMES::cryoDB },
+        { "geoDB", AFFIX_NAMES::geoDB },
+        { "physicalDB", AFFIX_NAMES::physicalDB },
+        { "dendroDB", AFFIX_NAMES::dendroDB },
     };
     // source https://genshin-impact.fandom.com/wiki/Artifacts/Distribution
     const std::vector<std::pair<int, int>> INITIAL_AFFIX_NUM_WEIGHT = { {3, 4}, {4, 1} };
@@ -139,17 +144,17 @@ namespace DATA {
         std::vector<std::pair<AFFIX_NAMES, int>> sub;
         int level;
 
-        Artifact () = default;
-        Artifact (const Artifact &a) = default;
-        Artifact (
-            SET_NAMES set, AFFIX_NAMES main, 
-            const std::vector<std::pair<AFFIX_NAMES, int>> &sub, int level):
+        Artifact() = default;
+        Artifact(const Artifact& a) = default;
+        Artifact(
+            SET_NAMES set, AFFIX_NAMES main,
+            const std::vector<std::pair<AFFIX_NAMES, int>>& sub, int level) :
             set(set), main(main), sub(sub), level(level) {}
 
         // construct with string output by to_string
-        Artifact (const std::string &art_str) {
+        Artifact(const std::string& art_str) {
             std::string s = art_str;
-            for (auto &i : s)
+            for (auto& i : s)
                 if (i == '|')
                     i = ' ';
             std::istringstream sin(s);
@@ -164,10 +169,10 @@ namespace DATA {
             while (1) {
                 std::string sub_data = "";
                 sin >> sub_data;
-                if (sin.eof()) break;
+                if (!sub_data.size()) break;
                 auto comma_pos = sub_data.find(",");
-                auto sub_affix = string_to_affix_names.find(sub_data.substr(0, comma_pos))->second;
-                auto sub_value = std::stoi(sub_data.substr(comma_pos));
+                auto sub_affix = string_to_affix_names.find(sub_data.substr(comma_pos + 1))->second;
+                auto sub_value = std::stoi(sub_data.substr(0, comma_pos));
                 sub.push_back({ sub_affix, sub_value });
             }
         }
@@ -179,7 +184,7 @@ namespace DATA {
                 substr += format("{:-2d},{:4s}", weight, type_to_string(string_to_affix_names, name));
             }
             if (sub.size() < AFFIX_NUM) substr += "|";
-            return format("SET {:7s}|LV {}|MAIN {:10s}|SUB {}", 
+            return format("SET {:7s}|LV {}|MAIN {:10s}|SUB {}",
                 type_to_string(string_to_set_names, set),
                 level,
                 type_to_string(string_to_affix_names, main),
@@ -190,12 +195,12 @@ namespace DATA {
 
     std::random_device rd;
     std::mt19937 mt(rd());
-	std::uniform_real_distribution<double> rand_real_dist(0, 1);
+    std::uniform_real_distribution<double> rand_real_dist(0, 1);
     std::normal_distribution<double> rand_normal_distribution_(0, 1);
 
     // uniformly return 0~max-1
     inline auto randint(int max) {
-		std::uniform_int_distribution<int> rand_int_dist(0, max - 1);
+        std::uniform_int_distribution<int> rand_int_dist(0, max - 1);
         return rand_int_dist(mt);
     }
 
@@ -211,7 +216,7 @@ namespace DATA {
 
     // vec contains first T second weight. will choose T by weight
     template<class T, class V>
-    inline V weighted_sum(const std::vector<std::pair<T, V>> &vec) {
+    inline V weighted_sum(const std::vector<std::pair<T, V>>& vec) {
         V sum = 0;
         for (auto& [i, j] : vec)
             sum += j;
@@ -220,7 +225,7 @@ namespace DATA {
 
     // vec contains first T second weight. will choose T by weight
     template<class T>
-    inline T weighted_rand(const std::vector<std::pair<T, int>> &vec) {
+    inline T weighted_rand(const std::vector<std::pair<T, int>>& vec) {
         int sum = weighted_sum(vec);
         int ret = randint(sum);
         for (auto& [i, j] : vec) {
@@ -261,10 +266,10 @@ namespace DATA {
 
     // random one artifact. can specify some keys, and if find key conflict (e.g. set is flower but main is not hp),
     // will throw runtime error.
-    auto random_one_artifact(SET_NAMES set = SET_NAMES::end, AFFIX_NAMES main = AFFIX_NAMES::end, int initial = 0, 
-                             std::vector<std::pair<AFFIX_NAMES, int>> sub = std::vector<std::pair<AFFIX_NAMES, int>>()) {
+    auto random_one_artifact(SET_NAMES set = SET_NAMES::end, AFFIX_NAMES main = AFFIX_NAMES::end, int initial = 0,
+        std::vector<std::pair<AFFIX_NAMES, int>> sub = std::vector<std::pair<AFFIX_NAMES, int>>()) {
         if (set == SET_NAMES::end)
-			set = get_random_set();
+            set = get_random_set();
         auto main_dist = get_main_distribution(set);
         if (main == AFFIX_NAMES::end)
             main = weighted_rand(main_dist);
@@ -286,9 +291,9 @@ namespace DATA {
                     throw std::runtime_error("affix weight wrong");
             }
             else
-				sub_affix.push_back(weighted_rand(dist));
+                sub_affix.push_back(weighted_rand(dist));
         }
-        for (int i = sub.size(); i < initial; i ++ )
+        for (int i = sub.size(); i < initial; i++)
             sub.push_back({ sub_affix[i], randint(AFFIX_UPDATE_MAX - AFFIX_UPDATE_MIN + 1) + AFFIX_UPDATE_MIN });
         return Artifact{ set, main, sub, 0 };
     }
@@ -318,14 +323,14 @@ namespace DATA {
 
         // sub rate
         std::vector<AFFIX_NAMES> calculated_subs;
-        for (auto &[name, weight] : a.sub) {
+        for (auto& [name, weight] : a.sub) {
             auto dist = get_sub_distribution(a.main, calculated_subs);
 
             // type rate
             orate = rate;
             rate *= get_weight_from_distribution(name, dist);
             rate /= weighted_sum(dist);
-			if (debug) std::cout << format("{:7.4f}|", rate / orate);
+            if (debug) std::cout << format("{:7.4f}|", rate / orate);
 
             // weight rate
             // rate /= AFFIX_UPDATE_MAX - AFFIX_UPDATE_MIN + 1;
@@ -352,8 +357,8 @@ namespace DATA {
     }
 
     auto generate_all_possible_sub_orders(
-            const int update_number, const AFFIX_NAMES main, 
-            std::vector<AFFIX_NAMES> current_sub = std::vector<AFFIX_NAMES>(), const double current_prob = 1) {
+        const int update_number, const AFFIX_NAMES main,
+        std::vector<AFFIX_NAMES> current_sub = std::vector<AFFIX_NAMES>(), const double current_prob = 1) {
         std::vector<std::pair<std::vector<AFFIX_NAMES>, double>> res;
         if (update_number == 0) {
             res.push_back({ current_sub, current_prob });
@@ -363,7 +368,7 @@ namespace DATA {
         auto sub_weight_sum = weighted_sum(subs);
         for (auto& [sub, sub_weight] : subs) {
             current_sub.push_back(sub);
-            for (auto& i : generate_all_possible_sub_orders(update_number - 1, main, current_sub, current_prob * sub_weight / sub_weight_sum)) {
+            for (auto& i : generate_all_possible_sub_orders(update_number - 1, main, current_sub, current_prob* sub_weight / sub_weight_sum)) {
                 res.push_back(std::move(i));
             }
             current_sub.pop_back();
@@ -384,7 +389,7 @@ namespace DATA {
     auto generate_all_artifacts_with_probs() {
 
         if (ALL_ARTIFACTS_ACCUMULATED_DONE) return;
-        
+
         decltype(all_artifacts_accumulated) res;
         auto initial_weight_sum = weighted_sum(INITIAL_AFFIX_NUM_WEIGHT);
 
@@ -439,8 +444,8 @@ namespace DATA {
             all_artifacts_accumulated_divided_by_set[set].push_back(std::move(i));
         }
         for (auto& [set, vec] : all_artifacts_accumulated_divided_by_set) {
-			for (int i = 1; i < vec.size(); i++)
-				vec[i].second += vec[i - 1].second;
+            for (int i = 1; i < vec.size(); i++)
+                vec[i].second += vec[i - 1].second;
         }
         for (int i = 1; i < res.size(); i++)
             res[i].second += res[i - 1].second;
@@ -459,9 +464,9 @@ namespace DATA {
         else {
             res = all_artifacts_accumulated_divided_by_set[set];
         }
-		for (int i = res.size() - 1; i >= 1; i--)
-			res[i].second -= res[i - 1].second;
-		return res;
+        for (int i = res.size() - 1; i >= 1; i--)
+            res[i].second -= res[i - 1].second;
+        return res;
     }
 
     // get random drop with all_artifacts_accumulated. random is double between 0 and 1.
@@ -582,13 +587,13 @@ namespace DP {
 
     // no need to explicitly call it. if find 3 sub artifact, calc will call this
     // function automatically. 
-    std::tuple<bool, dftype, dftype, double, double> calc_3(DATA::Artifact art, 
+    std::tuple<bool, dftype, dftype, double, double> calc_3(DATA::Artifact art,
         const std::map<DATA::AFFIX_NAMES, double>& sub_scores, double score_bar, dftype gain);
 
     /*
     input: current weight w1 w2 w3 w4, affix score s1 s2 s3 s4, upgrade time N,
            score bar S, gain G.
-           WARNING: it is recommended to call it with overload 
+           WARNING: it is recommended to call it with overload
            (artifact, score_map, score_bar, gain), otherwise it can only deal with
            4-sub artifacts.
 
@@ -627,12 +632,12 @@ namespace DP {
             auto current_score_bar = SCORE_BAR - max_increase * (upgrade_time - i) - EPS;
             if (DEBUG) std::cout << format("time {}, current score bar {}\n", i, current_score_bar);
             int for_count = 0;
-            for (auto &[status, count] : cell[i]) {
+            for (auto& [status, count] : cell[i]) {
                 stype status_score = 0;
-				for (int i = 0, j = status; i < DATA::AFFIX_NUM; i++) {
-					status_score += (j % BASE) * SCORE[i];
-					j /= BASE;
-				}
+                for (int i = 0, j = status; i < DATA::AFFIX_NUM; i++) {
+                    status_score += (j % BASE) * SCORE[i];
+                    j /= BASE;
+                }
                 dftype e_gain = 0, e_df_cost = 0;
                 double success_rate = 0;
                 stype e_score_gain = 0;
@@ -674,7 +679,7 @@ namespace DP {
                                 e_df_cost -= DOGFOOD_LOSS[current_upgrade + i + 1];
                             }
                             else {
-                                auto &[t_count, t_status_score, t_e_gain,
+                                auto& [t_count, t_status_score, t_e_gain,
                                     t_e_df_cost, t_success_rate, t_e_score_gain]
                                     = target->second;
                                 e_gain += t_e_gain;
@@ -690,8 +695,8 @@ namespace DP {
                     e_df_cost /= route_number;
                     success_rate /= route_number;
                     if (success_rate > 0) e_score_gain /= route_number * success_rate;
-                    if (DEBUG) std::cout << format("DP {}: {} {} C:{} SS:{} EG:{} EDF:{} SR:{}, ESG:{}\n", 
-                        i, status2str(status), e_gain > DOGFOOD_LOSS[current_upgrade + i] ? "SUCC": "FAIL", count, status_score, e_gain, e_df_cost, success_rate, e_score_gain);
+                    if (DEBUG) std::cout << format("DP {}: {} {} C:{} SS:{} EG:{} EDF:{} SR:{}, ESG:{}\n",
+                        i, status2str(status), e_gain > DOGFOOD_LOSS[current_upgrade + i] ? "SUCC" : "FAIL", count, status_score, e_gain, e_df_cost, success_rate, e_score_gain);
                     if (e_gain > DOGFOOD_LOSS[current_upgrade + i])
                         dp_map[i][status] = {
                             count,
@@ -717,7 +722,7 @@ namespace DP {
                 score_gain * 1. / SCORE_MULTIPLIER
             );
         }
-        auto &[count, status_score, e_gain, e_df_cost, success_rate,
+        auto& [count, status_score, e_gain, e_df_cost, success_rate,
             e_score_gain] = dp_map[0][0];
         return std::make_tuple(
             true,
@@ -734,7 +739,7 @@ namespace DP {
 
     input: current weight w1 w2 w3 w4, affix score s1 s2 s3 s4, upgrade time N,
            score bar S, gain G.
-           WARNING: it is recommended to call it with overload 
+           WARNING: it is recommended to call it with overload
            (artifact, score_map, score_bar, gain), otherwise it can only deal with
            4-sub artifacts.
 
@@ -792,7 +797,7 @@ namespace DP {
             auto current_score_bar = SCORE_BAR - max_increase * (upgrade_time - i) - EPS;
             if (DEBUG) std::cout << format("time {}, current score bar {:.2f}\n", i, current_score_bar);
             int for_count = 0;
-            for (auto &[status, count, status_score] : dp_cell[i]) {
+            for (auto& [status, count, status_score] : dp_cell[i]) {
                 dftype e_gain = 0, e_df_cost = 0;
                 double success_rate = 0;
                 stype e_score_gain = 0;
@@ -835,7 +840,7 @@ namespace DP {
                                 e_df_cost -= DOGFOOD_LOSS[current_upgrade + i + 1];
                             }
                             else {
-                                auto &[t_count, t_status_score, t_e_gain,
+                                auto& [t_count, t_status_score, t_e_gain,
                                     t_e_df_cost, t_success_rate, t_e_score_gain]
                                     = target->second;
                                 e_gain += t_e_gain;
@@ -851,8 +856,8 @@ namespace DP {
                     e_df_cost /= route_number;
                     success_rate /= route_number;
                     if (success_rate > 0) e_score_gain /= route_number * success_rate;
-                    if (DEBUG) std::cout << format("DP {}: {} {} C:{} SS:{} EG:{} EDF:{} SR:{}, ESG:{}\n", 
-                        i, status2str(status), e_gain > DOGFOOD_LOSS[current_upgrade + i] ? "SUCC": "FAIL", count, status_score, e_gain, e_df_cost, success_rate, e_score_gain);
+                    if (DEBUG) std::cout << format("DP {}: {} {} C:{} SS:{} EG:{} EDF:{} SR:{}, ESG:{}\n",
+                        i, status2str(status), e_gain > DOGFOOD_LOSS[current_upgrade + i] ? "SUCC" : "FAIL", count, status_score, e_gain, e_df_cost, success_rate, e_score_gain);
                     if (e_gain > DOGFOOD_LOSS[current_upgrade + i])
                         dp_map[i][status] = {
                             count,
@@ -878,7 +883,7 @@ namespace DP {
                 score_gain * 1. / SCORE_MULTIPLIER
             );
         }
-        auto &[count, status_score, e_gain, e_df_cost, success_rate,
+        auto& [count, status_score, e_gain, e_df_cost, success_rate,
             e_score_gain] = dp_map[0][0];
         return std::make_tuple(
             true,
@@ -889,8 +894,8 @@ namespace DP {
         );
     }
 
-    auto calc(const DATA::Artifact &art, const std::vector<double>& score, 
-              double score_bar, dftype gain) {
+    auto calc(const DATA::Artifact& art, const std::vector<double>& score,
+        double score_bar, dftype gain) {
         std::vector<int> weight;
         for (auto& [t, w] : art.sub)
             weight.push_back(w);
@@ -916,7 +921,7 @@ namespace DP {
     }
 
     // recommended calling version, have 3-sub support.
-    std::tuple<bool, DP::dftype, DP::dftype, double, double> calc(const DATA::Artifact& art, 
+    std::tuple<bool, DP::dftype, DP::dftype, double, double> calc(const DATA::Artifact& art,
         const std::map<DATA::AFFIX_NAMES, double>& sub_scores, double score_bar, dftype gain) {
 
         if (art.sub.size() == 3) {
@@ -929,7 +934,7 @@ namespace DP {
                 current_sub.push_back(t);
             auto sub_dist = DATA::get_sub_distribution(art.main, current_sub);
             auto sub_weight_sum = DATA::weighted_sum(sub_dist) * (DATA::AFFIX_UPDATE_MAX - DATA::AFFIX_UPDATE_MIN + 1);
-            
+
             dftype e_gain = 0, e_df_cost = 0;
             double success_rate = 0, e_score_gain = 0;
             for (auto& [t, w] : sub_dist) {
@@ -941,14 +946,14 @@ namespace DP {
                     e_df_cost += t_e_df_cost * w;
                     success_rate += t_success_rate * w;
                     e_score_gain += t_success_rate * t_e_score_gain * w;
-					// std::cout << format("w {} upgrade? {} expected gain {} dogfood cost {} success rate above bar {} expected better score if success {}\n", w, t_success, t_e_gain, t_e_df_cost, t_success_rate, t_e_score_gain);
+                    // std::cout << format("w {} upgrade? {} expected gain {} dogfood cost {} success rate above bar {} expected better score if success {}\n", w, t_success, t_e_gain, t_e_df_cost, t_success_rate, t_e_score_gain);
                     current_art.sub.pop_back();
                 }
             }
-			e_gain /= sub_weight_sum;
-			e_df_cost /= sub_weight_sum;
-			success_rate /= sub_weight_sum;
-			if (success_rate > 0) e_score_gain /= sub_weight_sum * success_rate;
+            e_gain /= sub_weight_sum;
+            e_df_cost /= sub_weight_sum;
+            success_rate /= sub_weight_sum;
+            if (success_rate > 0) e_score_gain /= sub_weight_sum * success_rate;
             bool success = e_gain > DOGFOOD_LOSS[0];
             if (!success) {
                 e_gain = DOGFOOD_LOSS[0];
@@ -956,16 +961,23 @@ namespace DP {
                 success_rate = 0;
                 e_score_gain = 0;
             }
-			return std::make_tuple(
-				success,
-				e_gain,
-				e_df_cost,
-				success_rate,
-				e_score_gain
-			);
+            return std::make_tuple(
+                success,
+                e_gain,
+                e_df_cost,
+                success_rate,
+                e_score_gain
+            );
         }
         return calc(art, select_sub_score(art, sub_scores), score_bar, gain);
     }
+
+    // get artifact string as input
+    // std::tuple<bool, DP::dftype, DP::dftype, double, double> calc(const std::string &art_string,
+    //     const std::map<DATA::AFFIX_NAMES, double>& sub_scores, double score_bar, dftype gain) {
+    //     auto art = DATA::Artifact(art_string);
+    //     return calc(art, sub_scores, score_bar, gain);
+    // }
 
     // output cell data into yaml. key1=N, key2=second, [list of first]
     void output_yaml() {
@@ -1010,7 +1022,7 @@ namespace DP {
         //           << r.success_rate << ' ' << r.score_gain << std::endl;
     }
 
-    auto test_sub_score(const std::map<DATA::AFFIX_NAMES, double> &sub_scores, double score_bar, dftype gain, double randnum = -1) {
+    auto test_sub_score(const std::map<DATA::AFFIX_NAMES, double>& sub_scores, double score_bar, dftype gain, double randnum = -1) {
         if (randnum < 0)
             randnum = DATA::rand();
         DATA::Artifact art = DATA::get_drop(randnum);
@@ -1023,8 +1035,8 @@ namespace DP {
         std::vector<std::vector<std::pair<double, double>>> results;
         results.resize(allart.size());
         // double results = 0;
-        #pragma omp parallel for
-        for (int i = 0; i < allart.size(); i ++ ) {
+#pragma omp parallel for
+        for (int i = 0; i < allart.size(); i++) {
             // TODO enumerate sub weight
             auto [art, rate] = allart[i];
             for (auto i = art.sub.size(); i--; ) rate /= DATA::AFFIX_UPDATE_MAX - DATA::AFFIX_UPDATE_MIN + 1;
@@ -1038,24 +1050,24 @@ namespace DP {
                         break;
                     }
                 if (!addflag) break;
-				auto [success, e_gain, e_df_cost, success_rate, e_score_gain] = calc(art, sub_scores, score_bar, gain);
-				results[i].push_back({e_df_cost, rate});
+                auto [success, e_gain, e_df_cost, success_rate, e_score_gain] = calc(art, sub_scores, score_bar, gain);
+                results[i].push_back({ e_df_cost, rate });
             }
             if (FIND_GAIN_DEBUG && i % 10 == 0) std::cout << "art number " << i << '/' << allart.size() << "\r";
             // std::cout << format("{} {} {} {} {} {}\n", rate, success, e_gain, e_df_cost, success_rate, e_score_gain);
         }
         double final_result = 0;
-        for (auto &result : results)
-			for (auto& [i, j] : result)
-				final_result += i * j;
+        for (auto& result : results)
+            for (auto& [i, j] : result)
+                final_result += i * j;
         if (FIND_GAIN_DEBUG) std::cout << "gain " << gain << " exp_df_cost " << final_result << std::endl;
         return final_result;
     }
 
     // 变量：score bar, score map, set (including all set), dfcost。目标：找到给定dfcost的gain设置
     // max_gain 最大可能价值，gain_accuracy二分到什么精度。一般不需要动
-    dftype find_gain(const std::map<DATA::AFFIX_NAMES, double>& sub_scores, double score_bar, dftype dfcost, DATA::SET_NAMES set = DATA::SET_NAMES::end, 
-                     dftype max_gain = 100000000, dftype gain_precision = 1) {
+    dftype find_gain(const std::map<DATA::AFFIX_NAMES, double>& sub_scores, double score_bar, dftype dfcost, DATA::SET_NAMES set = DATA::SET_NAMES::end,
+        dftype max_gain = 100000000, dftype gain_precision = 1) {
         // const std::vector<std::pair<DATA::Artifact, double>> &allart = set == DATA::SET_NAMES::end ? DATA::all_artifacts_accumulated : DATA::all_artifacts_accumulated_divided_by_set[set];
         auto allart = DATA::get_all_artifacts_with_probs(set);
         dftype min_gain = -SUCCESS_DOGFOOD_COST;
@@ -1073,20 +1085,20 @@ namespace DP {
     generate random input for find_gain. if no input, all random generate; otherwise use input as output.
     for sub scores, for every sub, 50% is 0, 50% is uniform random 0-1. specially, number atk/hp/def is randomized in 0-0.5 and multiplies atkp/hpp/defp.
     for score_bar, normal distribution (30, 15) and re-generate when result not in [0, 60]. larger than 60 almost always get infinite gain, although
-        theoritically maximum score is 90. 
+        theoritically maximum score is 90.
     for dfcost, one round get dogfood 10080 except 5x (which is counted in calc-dfcost). there's not much event to gain artifact dogfood,
         stable gain method contains daily overworld artifact farming (approx. 60000 exp per day) and from serenitea pot (100000 per week).
-        compared with whole week stamina to exp (10800 * 9 * 7) is about 10%. there's also 10% chance to gain 2x/5x exp when upgrading, 
-        so choose range as (10000, 14000). lower because may use 5x 3 to 1. 
+        compared with whole week stamina to exp (10800 * 9 * 7) is about 10%. there's also 10% chance to gain 2x/5x exp when upgrading,
+        so choose range as (10000, 14000). lower because may use 5x 3 to 1.
     for set, uniformly choose from five possible set.
     */
     std::tuple<
-		std::map<DATA::AFFIX_NAMES, double>,
+        std::map<DATA::AFFIX_NAMES, double>,
         double,
         dftype,
         DATA::SET_NAMES
     > generate_random_gain_input(std::map<DATA::AFFIX_NAMES, double> sub_scores = std::map<DATA::AFFIX_NAMES, double>(), double score_bar = -1,
-                                    dftype dfcost = -1, DATA::SET_NAMES set = DATA::SET_NAMES::end) {
+        dftype dfcost = -1, DATA::SET_NAMES set = DATA::SET_NAMES::end) {
         // sub_scores
         if (sub_scores.size() == 0) {
             const std::vector<DATA::AFFIX_NAMES> random_affix = { DATA::AFFIX_NAMES::hpp, DATA::AFFIX_NAMES::atkp, DATA::AFFIX_NAMES::defp, DATA::AFFIX_NAMES::em, DATA::AFFIX_NAMES::er, DATA::AFFIX_NAMES::cr, DATA::AFFIX_NAMES::cd };
@@ -1142,13 +1154,15 @@ namespace DP {
         };
         // FILE *f = fopen(filename.c_str(), "r");
         std::ifstream input(filename, std::ios::in);
+        if (input.fail())
+            return sub_scores;
         while (1) {
             std::map<DATA::AFFIX_NAMES, double> m;
             std::string note;
             input >> note;
             if (input.eof())
                 break;
-            for (auto &i : order) {
+            for (auto& i : order) {
                 double num;
                 input >> num;
                 m[DATA::string_to_affix_names.find(i)->second] = num;
@@ -1163,10 +1177,76 @@ namespace DP {
 
 #ifdef __clang__ // clang is compiled to JS, define interface
 
+
+auto get_string_to_affix_names() {
+    std::map<std::string, DATA::AFFIX_NAMES> map;
+    for (auto &[i, j] : DATA::string_to_affix_names)
+        // map[i] = static_cast<int>(j);
+        map[i] = j;
+    return map;
+}
+
+// interface for javascript, input as string, output double vector
+auto calc(const std::string &art_str, const std::string sub_scores_json, 
+    double score_bar, DP::dftype gain) {
+
+    auto art = DATA::Artifact(art_str);
+    std::map<std::string, double> sub_str_scores;
+    std::string name, number;
+    int pos = 0, status = 0; // status 0 name, status 1 number
+    while (sub_scores_json[pos ++ ] == '{');
+    while (sub_scores_json[pos] != '}') {
+        auto c = sub_scores_json[pos++];
+        // std::cout << c << std::endl;
+        if (c == ' ' || c == '"') continue;
+        if (c == ':' || c == ',') {
+            status = c == ':';
+            if (status == 0) {
+                // std::cout << name << '|' << number << '\n';
+                sub_str_scores[name] = std::stod(number);
+                name = number = "";
+            }
+            continue;
+        }
+        if (status == 0)
+            name += c;
+        else
+            number += c;
+    }
+    sub_str_scores[name] = std::stod(number);
+    // for (auto &[i, j] : sub_str_scores) std::cout << i << '|' << j << std::endl;
+
+    std::map<DATA::AFFIX_NAMES, double> sub_scores;
+    for (auto &[i, j] : sub_str_scores)
+        sub_scores[DATA::string_to_affix_names.find(i)->second] = j;
+
+    auto [a, b, c, d, e] = DP::calc(art, sub_scores, score_bar, gain);
+    std::vector<double> res;
+    res.push_back(a);
+    res.push_back(b);
+    res.push_back(c);
+    res.push_back(d);
+    res.push_back(e);
+    return res;
+}
+
 EMSCRIPTEN_BINDINGS(my_module) {
+    // function("get_string_to_affix_names", &get_string_to_affix_names);
+    // register_map<std::string, DATA::AFFIX_NAMES>("map<string, affix_names>");
+    // enum_<DATA::AFFIX_NAMES>("AFFIX_NAMES") {
+    //     start,
+    //     hp, atk, def,
+    //     hpp, atkp, defp,
+    //     em, er, cr, cd,
+    //     hb,
+    //     pyroDB, hydroDB, electroDB, anemoDB, cryoDB, geoDB, physicalDB, dendroDB,
+    //     end,
+    // };
+
     function("find_gain", &DP::find_gain);
-    auto (&choose_calc)(const DATA::Artifact&, const std::map<DATA::AFFIX_NAMES, double> &, double, DP::dftype) = DP::calc;
-    function("calc", &choose_calc);
+    // auto (&choose_calc)(const DATA::Artifact&, const std::map<DATA::AFFIX_NAMES, double> &, double, DP::dftype) = DP::calc;
+    function("calc", &calc);
+    register_vector<double>("vector<double>");
 }
 
 #else
@@ -1179,7 +1259,7 @@ int main() {
     for (int i = 0; i < 10; i++)
         DP::test_one_artifact(false);
     std::cout << format("used time {}\n", (clock() - current) * 1.0 / CLOCKS_PER_SEC);
-	*/
+    */
 
     // check appear rate calculation
     // for (int i = 0; i < 100; i++) {
@@ -1203,9 +1283,9 @@ int main() {
     // check appear rate and print
     // int times = 4, initial = 1000000;
     // auto m = DATA::check_sub_appear_rate(times, initial, DATA::SET_NAMES::flower);
-	// for (auto& [name, weight] : m) {
-	// 	std::cout << DATA::type_to_string(DATA::string_to_affix_names, name) << ' ' << weight * 1. / times / initial << '\n';
-	// }
+    // for (auto& [name, weight] : m) {
+    // 	std::cout << DATA::type_to_string(DATA::string_to_affix_names, name) << ' ' << weight * 1. / times / initial << '\n';
+    // }
 
     // test random drop time cost. sub score is hutao's
     std::map<DATA::AFFIX_NAMES, double> sub_scores = {
@@ -1224,7 +1304,7 @@ int main() {
     DP::dftype gain = 1000000;
     /*
     cc = clock();
-	// # pragma omp parallel for
+    // # pragma omp parallel for
     for (int i = 0; i < 10000; i++) {
         // DP::DEBUG = true;
         auto randnum = DATA::rand();
@@ -1232,7 +1312,7 @@ int main() {
         // std::cout << art.to_string() << ' ' << format("{:.12f}", randnum) << '\n';
         auto res = DP::test_sub_score(sub_scores, score_bar, gain, randnum);
         auto& [do_upgrade, gain, dogfood_cost, success_rate, score_gain] = res;
-		// std::cout << format("upgrade? {} expected gain {} dogfood cost {} success rate above bar {} expected better score if success {}\n", do_upgrade, gain, dogfood_cost, success_rate, score_gain);
+        // std::cout << format("upgrade? {} expected gain {} dogfood cost {} success rate above bar {} expected better score if success {}\n", do_upgrade, gain, dogfood_cost, success_rate, score_gain);
     }
     std::cout << (clock() - cc) * 1.0 / CLOCKS_PER_SEC << '\n';
     */
@@ -1257,15 +1337,30 @@ int main() {
         auto art = DATA::get_drop(randnum);
         auto art_str = art.to_string();
         DATA::Artifact new_art(art_str);
-        if (art_str != new_art.to_string()) {
+        auto new_art_str = new_art.to_string();
+        if (art_str != new_art_str) {
             std::cout << art_str << '\n' << new_art.to_string() << std::endl;
             throw std::runtime_error(art_str);
+        }
+        auto [ss, bar, df, set] = DP::generate_random_gain_input();
+        df = 2100000000;
+        auto try1 = DP::calc(art_str, ss, bar, df);
+        auto &[success, gain, dfcost, success_rate, scoregain] = try1;
+        auto try2 = DP::calc(art, ss, bar, df);
+        auto &[success2, gain2, dfcost2, success_rate2, scoregain2] = try2;
+        std::cout << "*****\n";
+        std::cout << art_str << '\n';
+        for (auto &[i, j] : ss) std::cout << format("\"{}\": {},", DATA::type_to_string(DATA::string_to_affix_names, i), j);
+        std::cout << format("success:{} gain:{} dfcost:{} success_rate:{} scoregain:{}\n", success, gain, dfcost, success_rate, scoregain);
+        if (try1 != try2) {
+			std::cout << format("success:{} gain:{} dfcost:{} success_rate:{} scoregain:{}\n", success2, gain2, dfcost2, success_rate2, scoregain2);
+            throw std::runtime_error("");
         }
     }
     return 0;
 
     // read predefined weights, random bar/df/set and calculate results
-    auto res = DP::read_existing_weight("weights.txt");
+    // auto res = DP::read_existing_weight("weights.txt");
     // for (auto &[note, data] : res) {
     //     std::cout << note << ' ';
     //     for (auto &[affix, wei] : data) {
@@ -1275,7 +1370,9 @@ int main() {
     // }
     // std::cout << res.size() << std::endl;
     // return 0;
-    for (auto &[note, data] : res) {
+    /*
+    // auto res = DP::read_existing_weight("weights.txt");
+    for (auto& [note, data] : res) {
         auto [ss, bar, df, set] = DP::generate_random_gain_input(data);
         auto result = DP::find_gain(ss, bar, df, set);
         std::string s = "";
@@ -1287,7 +1384,9 @@ int main() {
         std::cout << s << std::endl;
     }
     return 0;
+    */
 
+    /*
     // test random generate input and calculate result
     // DP::FIND_GAIN_DEBUG = true;
     for (auto i = 1000; i--; ) {
@@ -1301,5 +1400,37 @@ int main() {
         s += format(" bar:{} cost:{} set:{} result:{}", bar, df, DATA::type_to_string(DATA::string_to_set_names, set), result);
         std::cout << s << std::endl;
     }
+    */
+
+    /*
+    // read generated data and check data cost and real cost
+    std::string result_file = "result.txt";
+    std::ifstream rin(result_file);
+    while (!rin.fail()) {
+        char s[1024];
+        rin.getline(s, 1024);
+        std::string line = s;
+        std::map<DATA::AFFIX_NAMES, double> sub_scores;
+        double bar, cost, result, nnresult;
+        DATA::SET_NAMES set;
+        std::istringstream sin(line);
+        for (int _ = 15; _--; ) {
+            std::string ones;
+            sin >> ones;
+            auto comma = ones.find(":");
+            auto name = ones.substr(0, comma), value = ones.substr(comma + 1);
+            if (name == "bar") bar = std::stod(value);
+            else if (name == "cost") cost = std::stod(value);
+            else if (name == "set") set = DATA::string_to_set_names.find(value)->second;
+            else if (name == "result") result = std::stod(value);
+            else if (name == "nnresult") nnresult = std::stod(value);
+            else sub_scores[DATA::string_to_affix_names.find(name)->second] = std::stod(value);
+        }
+        if (cost > 14000) continue;
+        auto calc_cost = DP::get_expected_dfcost(sub_scores, bar, DATA::get_all_artifacts_with_probs(set), nnresult);
+        std::cout << line << "real_cost:" << calc_cost << " percent:" << calc_cost / cost << std::endl;
+    }
+    */
 }
 #endif
+
