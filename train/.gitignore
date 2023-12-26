@@ -3,5 +3,6 @@ data.pth
 models
 data
 test_data
+test_data_wide
 wandb
 __pycache__

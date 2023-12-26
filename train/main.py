@@ -6,6 +6,7 @@ from tqdm import tqdm
 import random
 import os
 import sys
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
@@ -77,8 +78,9 @@ def process_data(data_folder = 'data', save_pth = 'data.pth'):
     return raw
 
 
-def data_clean(data, y_max = 99999000, bar_max = 70, cost_max = 14000, 
-               cost_min = 10000, set_filter = [], do_normalize = True):
+def data_clean(data, y_max = 99999000, y_min = 3790, bar_max = 70, 
+               cost_max = 14000, cost_min = 10000, set_filter = [], 
+               do_normalize = True):
     """
     filter data, data bigger than max will be removed, if set filter is set,
     only choose set number in set filter. if do normalize, will normalize
@@ -109,9 +111,10 @@ def data_clean(data, y_max = 99999000, bar_max = 70, cost_max = 14000,
     assert (bar is not None and cost is not None 
             and set is not None and y is not None)
     set = set.long()
-    select = cost >= cost_min
+    select = (cost >= cost_min) & (y >= y_min)
     for d, b in [[y, y_max], [bar, bar_max], [cost, cost_max]]:
         select = select & (d <= b)
+        # print(d, b, (d <= b).sum(), select.sum())
     for s in set_filter:
         select = select & (set == s)
     print(f'input {len(data)} data, select {select.sum()}')
@@ -122,7 +125,7 @@ def data_clean(data, y_max = 99999000, bar_max = 70, cost_max = 14000,
         bar /= bar_max
         cost = (cost - cost_min) / (cost_max - cost_min)
         # y /= y_max
-    return weight, bar, cost, set, logy
+    return [weight, bar, cost, set, logy], data[select]
 
 
 def get_dataloader(data, batch_size = 32, train_split = 0.8):
@@ -254,6 +257,28 @@ def train(model, data, test_data, lr = 1e-5, iteration = 10000000,
     return model
 
 
+def test(model, load, input_data, input_data_raw, test_save):
+    model.load_state_dict(torch.load(load, map_location = 'cpu'))
+    result = []
+    for data, data_raw in zip(zip(*input_data), input_data_raw):
+        data = [t.unsqueeze(0) for t in data]
+        x, y = data[:-1], data[-1]
+        res = model(*x)
+        res = res.exp()
+        res = res.item()
+        keys = ['hp', 'atk', 'def', 'hpp', 'atkp', 'defp', 'em', 'er', 'cr', 
+                'cd', 'bar', 'cost', 'set', 'result']
+        oneline = ''
+        for onedata, key in zip(data_raw, keys):
+            onedata = onedata.item()
+            if key == 'set':
+                onedata = setname[int(onedata)]
+            oneline += f'{key}:{onedata} '
+        oneline += f'nnresult:{res} '
+        result.append(oneline)
+    open(test_save, 'w').write('\n'.join(result))
+
+
 def read_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('set_filter', help = 'set set_filter. if is -1,'
@@ -268,6 +293,9 @@ def read_args():
                         'in max_y.', type = int)
     parser.add_argument('model', help = 'model class name')
     parser.add_argument('hidden', help = 'hidden layer number and size')
+    parser.add_argument('--load', default = '')
+    parser.add_argument('--test_save', default = 'result.txt')
+    parser.add_argument('--do', default = 'train')
     args = parser.parse_args()
     if args.set_filter == '-1':
         args.set_filter = []
@@ -282,7 +310,7 @@ if __name__ == '__main__':
 
     data = process_data()
     print('----- train data -----\n', data.shape)
-    data_cleaned = data_clean(
+    data_cleaned, data_cleaned_raw = data_clean(
         data, 
         set_filter = args.set_filter, 
         y_max = args.max_y
@@ -290,20 +318,26 @@ if __name__ == '__main__':
     print(data_cleaned[0].shape)
     test_data = process_data(args.test_data_folder)
     print('----- test data -----\n', test_data.shape)
-    test_data_cleaned = data_clean(
+    test_data_cleaned, test_data_cleaned_raw = data_clean(
         test_data, 
         set_filter = args.set_filter, 
-        y_max = args.test_max_y
+        y_max = args.test_max_y,
+        # cost_max = 100000
     )
+    # test_data_cleaned[2] *= 100000 / 14000
     print(test_data_cleaned[0].shape)
     # draw_avg_dist_plot(bar, y, 0, 70)
     # model = MLP(13, hidden = [32, 32, 32])
     model = globals()[args.model](13, hidden = args.hidden)
 
-    train(model, data_cleaned, test_data_cleaned, 
-          iteration = args.iteration, 
-          lr = args.lr,
-          wandb_name = f'set{",".join([str(x) for x in args.set_filter])}_'
-                       f'lr{args.lr}_'
-                       f'{args.model}_'
-                       f'{",".join([str(x) for x in args.hidden])}')
+    if args.do == 'train':
+        train(model, data_cleaned, test_data_cleaned, 
+              iteration = args.iteration, 
+              lr = args.lr,
+              wandb_name = f'set{",".join([str(x) for x in args.set_filter])}_'
+                           f'lr{args.lr}_'
+                           f'{args.model}_'
+                           f'{",".join([str(x) for x in args.hidden])}')
+    if args.do == 'test':
+        test(model, args.load, test_data_cleaned, test_data_cleaned_raw, 
+             args.test_save)
